@@ -11,13 +11,27 @@ from sklearn.metrics import roc_auc_score
 
 import torchvision
 
+def _load_densenet(builder, weightEnumName, isTrained):
+
+    if not isTrained:
+        try:
+            return builder(weights=None)
+        except TypeError:
+            return builder(pretrained=False)
+
+    weightEnum = getattr(torchvision.models, weightEnumName, None)
+    if weightEnum is not None:
+        return builder(weights=weightEnum.DEFAULT)
+
+    return builder(pretrained=True)
+
 class DenseNet121(nn.Module):
 
     def __init__(self, classCount, isTrained):
 	
         super(DenseNet121, self).__init__()
 		
-        self.densenet121 = torchvision.models.densenet121(pretrained=isTrained)
+        self.densenet121 = _load_densenet(torchvision.models.densenet121, 'DenseNet121_Weights', isTrained)
 
         kernelCount = self.densenet121.classifier.in_features
 		
@@ -33,7 +47,7 @@ class DenseNet169(nn.Module):
         
         super(DenseNet169, self).__init__()
         
-        self.densenet169 = torchvision.models.densenet169(pretrained=isTrained)
+        self.densenet169 = _load_densenet(torchvision.models.densenet169, 'DenseNet169_Weights', isTrained)
         
         kernelCount = self.densenet169.classifier.in_features
         
@@ -49,7 +63,7 @@ class DenseNet201(nn.Module):
         
         super(DenseNet201, self).__init__()
         
-        self.densenet201 = torchvision.models.densenet201(pretrained=isTrained)
+        self.densenet201 = _load_densenet(torchvision.models.densenet201, 'DenseNet201_Weights', isTrained)
         
         kernelCount = self.densenet201.classifier.in_features
         
