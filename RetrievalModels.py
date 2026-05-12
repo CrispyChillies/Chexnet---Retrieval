@@ -178,6 +178,10 @@ BACKBONE_SPECS = {
         "source": "timm",
         "builder": "convnextv2_base.fcmae_ft_in22k_in1k",
     },
+    "convnextv2_base_384_timm": {
+        "source": "timm",
+        "builder": "convnextv2_base.fcmae_ft_in22k_in1k_384",
+    },
     "dinov2_vits14_timm": {
         "source": "timm",
         "builder": "vit_small_patch14_dinov2.lvd142m",

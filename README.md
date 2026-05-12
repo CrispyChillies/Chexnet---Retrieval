@@ -34,7 +34,7 @@ densenet-201.
 Retrieval-specific scaffolding has been added in:
 
 * **RetrievalDataset.py** - dataset and balanced batch sampler with pathology, patient, and exact-label grouping
-* **RetrievalModels.py** - generic retrieval backbone registry with ResNet-50 and optional ConvNeXtV2 / DINOv2 backbones
+* **RetrievalModels.py** - generic retrieval backbone registry with ResNet-50 and optional ConvNeXtV2 / DINOv2 backbones, including `convnextv2_base_384_timm`
 * **RetrievalTrainer.py** - supervised contrastive finetuning loop, ASL auxiliary loss, hard-negative mining, Recall@K, mAP@10, and nDCG@10
 * **SplitBuilder.py** - patient-disjoint split generation utility
 * **RETRIEVAL.md** - task plan, loss choice, dataloader notes, and retrieval options
@@ -53,11 +53,26 @@ Train retrieval with the current default setup:
 python Main.py retrieval-train --data-dir ./database --train-file ./dataset/retrieval_patient_train.txt --val-file ./dataset/retrieval_patient_val.txt --architecture resnet50 --use-pretrained --classification-loss asl --positive-mode label_overlap --grouping pathology --batch-size 32 --max-epoch 20 --backbone-learning-rate 1e-5 --head-learning-rate 1e-4 --output-dir ./models
 ```
 
+The retrieval preprocessing now follows:
+
+- `image-size=224` -> `resize-size=256`
+- `image-size=384` -> `resize-size=432`
+- training uses `Resize -> (RandomCrop if --rand-resize else CenterCrop) -> RandomHorizontalFlip -> ColorJitter -> ToTensor -> Normalize`
+- validation/test uses `Resize -> CenterCrop -> ToTensor -> Normalize`
+
 Test a trained retrieval checkpoint:
 
 ```powershell
 python Main.py retrieval-test --data-dir ./database --test-file ./dataset/retrieval_patient_test.txt --architecture resnet50 --model-path ./models/retrieval-<timestamp>.pth.tar --positive-mode label_overlap
 ```
+
+Train with the `timm` ConvNeXtV2 Base 384 backbone:
+
+```powershell
+python Main.py retrieval-train --data-dir ./database --train-file ./dataset/retrieval_patient_train.txt --val-file ./dataset/retrieval_patient_val.txt --architecture convnextv2_base_384_timm --use-pretrained --classification-loss asl --positive-mode label_overlap --grouping pathology --batch-size 16 --image-size 384 --max-epoch 20 --backbone-learning-rate 1e-5 --head-learning-rate 1e-4 --output-dir ./models
+```
+
+This backbone requires `timm` to be installed in your environment.
 
 ## Results
 The highest accuracy 0.8508 was achieved by the model m-25012018-123527 (see the models directory).

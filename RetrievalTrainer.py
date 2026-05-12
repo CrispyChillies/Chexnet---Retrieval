@@ -287,6 +287,38 @@ def compute_ndcg_at_k(relevance, k):
 class RetrievalTrainer(object):
 
     @staticmethod
+    def _resolve_resize_size(imageSize, resizeSize=None):
+
+        if resizeSize is not None:
+            return resizeSize
+        if imageSize == 384:
+            return 432
+        return 256
+
+    @staticmethod
+    def _build_train_transform(imageSize, resizeSize=None, randResize=False):
+
+        resizeSize = RetrievalTrainer._resolve_resize_size(imageSize, resizeSize)
+        normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        cropTransform = (
+            transforms.RandomCrop(imageSize, padding=4)
+            if randResize
+            else transforms.CenterCrop(imageSize)
+        )
+
+        return transforms.Compose(
+            [
+                transforms.Lambda(lambda image: image.convert("RGB")),
+                transforms.Resize(resizeSize),
+                cropTransform,
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.ColorJitter(brightness=0.1, contrast=0.1),
+                transforms.ToTensor(),
+                normalize,
+            ]
+        )
+
+    @staticmethod
     def _create_model(device, architecture, use_pretrained, embeddingDim, projectionDim, classCount):
 
         model = RetrievalBackboneModel(
@@ -303,12 +335,15 @@ class RetrievalTrainer(object):
         return model
 
     @staticmethod
-    def _build_eval_transform(imageSize):
+    def _build_eval_transform(imageSize, resizeSize=None):
 
+        resizeSize = RetrievalTrainer._resolve_resize_size(imageSize, resizeSize)
         normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         return transforms.Compose(
             [
-                transforms.Resize((imageSize, imageSize)),
+                transforms.Lambda(lambda image: image.convert("RGB")),
+                transforms.Resize(resizeSize),
+                transforms.CenterCrop(imageSize),
                 transforms.ToTensor(),
                 normalize,
             ]
@@ -349,6 +384,8 @@ class RetrievalTrainer(object):
         checkpointPath=None,
         outputDir="models",
         numWorkers=8,
+        resizeSize=None,
+        randResize=False,
     ):
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -363,16 +400,12 @@ class RetrievalTrainer(object):
             classCount=classCount,
         )
 
-        normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-        trainTransform = transforms.Compose(
-            [
-                transforms.RandomResizedCrop(imageSize, scale=(0.7, 1.0)),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]
+        trainTransform = RetrievalTrainer._build_train_transform(
+            imageSize=imageSize,
+            resizeSize=resizeSize,
+            randResize=randResize,
         )
-        evalTransform = RetrievalTrainer._build_eval_transform(imageSize)
+        evalTransform = RetrievalTrainer._build_eval_transform(imageSize=imageSize, resizeSize=resizeSize)
 
         datasetTrain = NIHRetrievalDataset(pathDirData, pathFileTrain, transform=trainTransform)
         datasetTrainEval = NIHRetrievalDataset(pathDirData, pathFileTrain, transform=evalTransform)
@@ -533,6 +566,7 @@ class RetrievalTrainer(object):
         positiveMode="label_overlap",
         treatNormalAsPositive=False,
         numWorkers=8,
+        resizeSize=None,
     ):
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -550,7 +584,7 @@ class RetrievalTrainer(object):
         checkpoint = torch.load(pathModel, map_location=device)
         model.load_state_dict(checkpoint["state_dict"])
 
-        evalTransform = RetrievalTrainer._build_eval_transform(imageSize)
+        evalTransform = RetrievalTrainer._build_eval_transform(imageSize=imageSize, resizeSize=resizeSize)
         datasetTest = NIHRetrievalDataset(pathDirData, pathFileTest, transform=evalTransform)
         dataLoaderTest = DataLoader(
             datasetTest,

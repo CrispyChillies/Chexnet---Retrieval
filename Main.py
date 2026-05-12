@@ -16,10 +16,12 @@ def add_shared_retrieval_args(parser):
     parser.set_defaults(use_pretrained=True)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--image-size", type=int, default=224)
+    parser.add_argument("--resize-size", type=int, default=None)
     parser.add_argument("--embedding-dim", type=int, default=128)
     parser.add_argument("--projection-dim", type=int, default=128)
     parser.add_argument("--positive-mode", choices=["label_overlap", "exact_label", "same_patient"], default="label_overlap")
     parser.add_argument("--treat-normal-as-positive", action="store_true")
+    parser.add_argument("--rand-resize", action="store_true")
     parser.add_argument("--num-workers", type=int, default=8)
 
 
@@ -95,6 +97,7 @@ def run_retrieval_train(args):
         batchSize=args.batch_size,
         maxEpoch=args.max_epoch,
         imageSize=args.image_size,
+        resizeSize=args.resize_size,
         embeddingDim=args.embedding_dim,
         projectionDim=args.projection_dim,
         temperature=args.temperature,
@@ -119,6 +122,7 @@ def run_retrieval_train(args):
         checkpointPath=args.checkpoint,
         outputDir=args.output_dir,
         numWorkers=args.num_workers,
+        randResize=args.rand_resize,
     )
 
 
@@ -135,6 +139,7 @@ def run_retrieval_test(args):
         classCount=args.class_count,
         batchSize=args.batch_size,
         imageSize=args.image_size,
+        resizeSize=args.resize_size,
         embeddingDim=args.embedding_dim,
         projectionDim=args.projection_dim,
         positiveMode=args.positive_mode,
